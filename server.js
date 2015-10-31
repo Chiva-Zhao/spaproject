@@ -1,4 +1,6 @@
 var express = require('express');
+// Passport configuration
+require('./server/config/passport')(passport);
 var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
@@ -7,6 +9,12 @@ var bodyParser = require('body-parser');
 var routes = require('./server/routes/index');
 var users = require('./server/routes/users');
 var speakers = require('./server/routes/speakers');
+var mongoose = require('mongoose');
+var flash = require('connect-flash');
+var passport = require('passport');
+// Modules to store session
+var session = require('express-session');
+var MongoStore = require('connect-mongo')(session);
 var app = express();
 // view engine setup
 app.set('views', path.join(__dirname, './server/views'));
@@ -23,10 +31,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', routes);
 app.use('/users', users);
 app.use('/api/speakers/', speakers);
+// flash warning messages
+app.use(flash());
+// Init passport authentication
+app.use(passport.initialize());
+// persistent login sessions
+app.use(passport.session());
+// required for passport
+// secret for session
+app.use(session({
+    secret: 'sometextgohere',
+    saveUninitialized: true,
+    resave: true,
+    //store session on MongoDB using express-session + connect mongo
+    store: new MongoStore({
+        url: config.url,
+        collection: 'sessions'
+    })
+}));
 // Database configuration
 var config = require('./server/config/config.js');
 // connect to our database
-var mongoose = require('mongoose');
 mongoose.connect(config.url);
 // Check if MongoDB is running
 mongoose.connection.on('error', function() {
